@@ -1,84 +1,156 @@
 #!/usr/bin/env python3
-import rospy
+
+# Python libraries
+import math
 from time import sleep, time
+import sys
+
+# ROS
+import rospy
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
+
+# Returns the distance between two sets of X-Y coordinates
+def getDistance(startPos, endPos):
+    # print("Start Pos: ", startPos, " | End pos: ", endPos)
+    (start_x, start_y) = startPos # Gotta love tuple unpacking
+    (end_x, end_y) = endPos
+    ret = math.sqrt((end_x - start_x)**2 + (end_y - start_y)**2)
+    # print("Robot has moved", ret, "m")
+    return ret
+
+# Print and log the radians between two angles a nd b
+def doneTurning(startRad, curRad):
+    # I'm using a negative turn speed so curRad < startRad
+    print("Start rad: ",startRad," | Cur rad: ", curRad)
+    ret = abs(curRad - startRad)
+    print("Turned: ", ret, " rads")
+    return ret
 
 class DriveInSquare(object):
     def __init__(self):
         # Our Initialized Node:
         rospy.init_node('drive_in_square')
+        
+        #Rospy Params
+        self.queue_size = 20 # The size of our message queues
+        self.rateLimit = rospy.Rate(10) # How often we publish messages (2 Hz), utilize with self.rateLimit.sleep()
 
-        # A publisher to tell Turtlebot what to do
-        self.move = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        # Topic Objects
+        self.move = rospy.Publisher('/cmd_vel', Twist , queue_size=self.queue_size) # A publisher to tell Turtlebot what to do
+        self.getPose = rospy.Subscriber('/odom', Odometry, callback=self.setPose, queue_size=self.queue_size) # A subscriber to keep track of where we are
 
-        # The length the robot should move in any one direction, m
-        self.squareEdgeLength = 1
-        # How many radians we should turn at one time
-        self.turnRadians = 1.5708
-        # How fast we want to drive and turn the bot
-        self.forwardSpeed = 0.25 #m/s
-        self.turnSpeed = -0.25 #radians/s, ~28.5 degrees per second
+        # Movement parameters
+        self.loops = 1 # How many times we want the robot to move in a square
+        self.squareEdgeLength = 1 # The length the robot should move in any one direction (m)
+        self.turnRadians = math.pi / 2 # How many radians we should turn at one time (rad)
+        self.forwardSpeed = 0.2 # m/s
+        self.turnSpeed = 0.2 # rad/s
+        
 
-
+        # Movement Commands
         _forwardCommand = Twist()
         _forwardCommand.linear.x = self.forwardSpeed
         _forwardCommand.angular.z = 0.0
 
-        # initialize a Forward commend
-        self.forwardCommand = _forwardCommand
+        self.forwardCommand = _forwardCommand # initialize a Forward commend
 
         _turnCommand = Twist()
         _turnCommand.linear.x = 0.0
         _turnCommand.angular.z = self.turnSpeed
 
-        # initialize a turn command
-        self.turnCommand = _turnCommand
+        self.turnCommand = _turnCommand # initialize a turn command
 
         _stopCommand = Twist()
         _stopCommand.linear.x = 0.0
         _stopCommand.angular.z = 0.0
 
-        # initialize a stop command
-        self.stopCommand = _stopCommand
+        self.stopCommand = _stopCommand # initialize a stop command
+
+        # Odometry State holder
+        self.poseX = None # An x coordinate
+        self.poseY = None # A y coordinate
+        self.poseRad = None # A radian rotation coordinate
+
+        print("Using Forward Speed: ", self.forwardSpeed)
+        print("Using Turn Speed: ", self.turnSpeed)
+        
+
+    # A callback for setting Odometry state
+    def setPose(self, odomMsg):
+        # Extract the robot's position and record it
+        self.poseX = odomMsg.pose.pose.position.x
+        self.poseY = odomMsg.pose.pose.position.y
+
+        # Calculate the robot's rotations and record it
+        orientation = odomMsg.pose.pose.orientation
+        (_, _, yaw) = euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
+        self.poseRad = yaw
+        # print("New Coords: ", self.poseX, "," ,self.poseY, "@", self.poseRad)
     
     # A stop command to cancel out prior instructions 
-    def stop(self):
-        t_end = time() + 1.5
-        while time() < t_end:
+    def stop(self, duration):
+        t_end = time() + duration
+        # Publish for a specified duration of time
+        while time() < t_end and not rospy.is_shutdown():
             self.move.publish(self.stopCommand)
+            self.rateLimit.sleep()
 
     # Tell the bot to move squareEdgeLength meters, and then stop
-    def forward(self):
-        forward_time = abs(self.squareEdgeLength / self.forwardSpeed)
-        t_end = time() + forward_time
-        while time() < t_end:
+    def moveForward(self, distance):
+        # Extract an initial position from state
+        startPos = (self.poseX, self.poseY)
+
+        # Go forward until we move 'distance' m
+        while getDistance(startPos, (self.poseX, self.poseY)) < distance and not rospy.is_shutdown():
             self.move.publish(self.forwardCommand)
-        # sleep(abs(self.squareEdgeLength / self.forwardSpeed))
-        self.stop()
+            self.rateLimit.sleep()
 
     # Tell the bot to turn 90 degress, and then stop
-    def turn(self):
-        turn_time = abs(self.turnRadians / self.turnSpeed)
-        t_end = time() + turn_time
-        while time() < t_end:
+    def turn(self, radians):
+        # Extract an initial orientation from state
+        startRad = self.poseRad
+
+        # Turn until we turn 'radians' radians
+        while abs(self.poseRad - startRad) < radians and not rospy.is_shutdown():
             self.move.publish(self.turnCommand)
-        # sleep(abs(self.turnRadians / self.turnSpeed))
-        self.stop()
+            self.rateLimit.sleep()
 
+    # Tell the robot to move in the shape of a square once
+    def singleLoop(self):
+        # Move along all four edges of the square
+        for i in range(4):
+            print("Turn ", i)
+            # Go Forward by self.squareEdgeLength m
+            print("Moving Forward")
+            self.moveForward(self.squareEdgeLength)
+            self.stop(1)
+            # Then turn by self.turnRadians rads
+            print("Turning")
+            self.turn(self.turnRadians)
+            self.stop(1)
 
-    # Init Run method
+    # Run method: Describes the behavior of our robot
     def run(self):
-        # Move in a square, once
+        # Wait to have actionable Odometry
+        # Use the last set variable to be safe
+        print("Waiting on Odemetry")
+        while self.poseRad is None and not rospy.is_shutdown():
+            print("...")
+            sleep(1)
         
-        # Go Forward
-        print("Moving Forward")
-        self.forward()
-        # Then turn
-        print("Turning")
-        self.turn()
-        # ... do it again
+        # Move in a square `self.loops` times
+        for i in range(self.loops):
+            self.singleLoop()
 
+        # Stop the robot, then exit the program
+        self.stop(1) # let's try stopping for one second
+        sys.exit(1)
+        
 if __name__ == "__main__":
     node = DriveInSquare() 
     node.run()
+
+
 
