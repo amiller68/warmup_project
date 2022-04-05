@@ -35,6 +35,8 @@ My DriveInSquare object implements the following functions:
 - run():
 	- This function sleeps until the odometry state of the object is initialized
 	- it then runs singleLoop() once and then exits
+### GIF
+See handin.gif
 
 ## Challenges
 The first challenge I faced when handling the robot was imprecision. My first approach was to transition my implementation from velocity duration based, to odometry based. The extra measurement radically improved my robots accuracy, however it still suffered issues. I realized I could fix this by adjusting the rate to reflect the data resolution I needed in my implementation. I settled on a rate of 20 Hz.
