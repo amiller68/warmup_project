@@ -20,14 +20,6 @@ def getDistance(startPos, endPos):
     # print("Robot has moved", ret, "m")
     return ret
 
-# Print and log the radians between two angles a nd b
-def doneTurning(startRad, curRad):
-    # I'm using a negative turn speed so curRad < startRad
-    print("Start rad: ",startRad," | Cur rad: ", curRad)
-    ret = abs(curRad - startRad)
-    print("Turned: ", ret, " rads")
-    return ret
-
 class DriveInSquare(object):
     def __init__(self):
         # Our Initialized Node:
@@ -43,7 +35,7 @@ class DriveInSquare(object):
 
         # Movement parameters
         self.loops = 1 # How many times we want the robot to move in a square
-        self.squareEdgeLength = 1 # The length the robot should move in any one direction (m)
+        self.forwardDistance = 1 # The length the robot should move in any one direction (m)
         self.turnRadians = math.pi / 2 # How many radians we should turn at one time (rad)
         self.forwardSpeed = 0.2 # m/s
         self.turnSpeed = 0.2 # rad/s
@@ -98,22 +90,22 @@ class DriveInSquare(object):
             self.rateLimit.sleep()
 
     # Tell the bot to move squareEdgeLength meters, and then stop
-    def moveForward(self, distance):
+    def moveForward(self):
         # Extract an initial position from state
         startPos = (self.poseX, self.poseY)
 
         # Go forward until we move 'distance' m
-        while getDistance(startPos, (self.poseX, self.poseY)) < distance and not rospy.is_shutdown():
+        while getDistance(startPos, (self.poseX, self.poseY)) < self.forwardDistance and not rospy.is_shutdown():
             self.move.publish(self.forwardCommand)
             self.rateLimit.sleep()
 
     # Tell the bot to turn 90 degress, and then stop
-    def turn(self, radians):
+    def turn(self):
         # Extract an initial orientation from state
         startRad = self.poseRad
 
         # Turn until we turn 'radians' radians
-        while abs(self.poseRad - startRad) < radians and not rospy.is_shutdown():
+        while abs(self.poseRad - startRad) < self.turnRadians and not rospy.is_shutdown():
             self.move.publish(self.turnCommand)
             self.rateLimit.sleep()
 
@@ -124,11 +116,11 @@ class DriveInSquare(object):
             print("Turn ", i)
             # Go Forward by self.squareEdgeLength m
             print("Moving Forward")
-            self.moveForward(self.squareEdgeLength)
+            self.moveForward()
             self.stop(1)
             # Then turn by self.turnRadians rads
             print("Turning")
-            self.turn(self.turnRadians)
+            self.turn()
             self.stop(1)
 
     # Run method: Describes the behavior of our robot
