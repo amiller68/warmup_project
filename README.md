@@ -22,17 +22,19 @@ My DriveInSquare object implements the following functions:
 	- this method first records a start position using the current odometry (x,y) position state
 	- it then proceeds to publih the forward command to the /cmd_vel topic until the robot has moved the specified length of the square, in  m
 	- It checks this by continually comparing `getDistance(star position, current position)` to `distance`
+	- once its done moving the robot the method calls stop(1)
 - turn():
 	- this method first records a start rotation using the current odometry rotation state
 	- it then proceeds to publih the turn command to the /cmd_vel topic until the robot has rotated the specified number of radians, in rad
 	- It checks this by continually comparing `abs(start rotation, current rotation) ` to `radians`
+	- once its done moving the robot the method calls stop(1)
 - singleLoop():
-	- This function uses stop, moveForward, and turn to move the robot in a square
-	- it implements this behaviour by calling moveForward(), stop(1), turn(), stop(1) four times
+	- This function uses  moveForward and turn to move the robot in a square
+	- it implements this behaviour by calling moveForward(), turn() four times
 
 - run():
 	- This function sleeps until the odometry state of the object is initialized
-	- it then runs singleLoop() once, stops the robot, and then exits
+	- it then runs singleLoop() once and then exits
 
 ## Challenges
 The first challenge I faced when handling the robot was imprecision. My first approach was to transition my implementation from velocity duration based, to odometry based. The extra measurement radically improved my robots accuracy, however it still suffered issues. I realized I could fix this by adjusting the rate to reflect the data resolution I needed in my implementation. I settled on a rate of 20 Hz.

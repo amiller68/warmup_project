@@ -89,7 +89,7 @@ class DriveInSquare(object):
             self.move.publish(self.stopCommand)
             self.rateLimit.sleep()
 
-    # Tell the bot to move squareEdgeLength meters, and then stop
+    # Tell the bot to move forwardDistance meters, and then stop.
     def moveForward(self):
         # Extract an initial position from state
         startPos = (self.poseX, self.poseY)
@@ -98,8 +98,9 @@ class DriveInSquare(object):
         while getDistance(startPos, (self.poseX, self.poseY)) < self.forwardDistance and not rospy.is_shutdown():
             self.move.publish(self.forwardCommand)
             self.rateLimit.sleep()
+        self.stop(1)
 
-    # Tell the bot to turn 90 degress, and then stop
+    # Tell the bot to turn turnRadians rads, and then stop.
     def turn(self):
         # Extract an initial orientation from state
         startRad = self.poseRad
@@ -108,6 +109,8 @@ class DriveInSquare(object):
         while abs(self.poseRad - startRad) < self.turnRadians and not rospy.is_shutdown():
             self.move.publish(self.turnCommand)
             self.rateLimit.sleep()
+        self.stop(1)
+
 
     # Tell the robot to move in the shape of a square once
     def singleLoop(self):
@@ -117,11 +120,9 @@ class DriveInSquare(object):
             # Go Forward by self.squareEdgeLength m
             print("Moving Forward")
             self.moveForward()
-            self.stop(1)
             # Then turn by self.turnRadians rads
             print("Turning")
             self.turn()
-            self.stop(1)
 
     # Run method: Describes the behavior of our robot
     def run(self):
@@ -135,9 +136,6 @@ class DriveInSquare(object):
         # Move in a square `self.loops` times
         for i in range(self.loops):
             self.singleLoop()
-
-        # Stop the robot, then exit the program
-        self.stop(1) # let's try stopping for one second
         sys.exit(1)
         
 if __name__ == "__main__":
