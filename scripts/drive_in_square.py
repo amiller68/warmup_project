@@ -20,14 +20,24 @@ def getDistance(startPos, endPos):
     # print("Robot has moved", ret, "m")
     return ret
 
+
+# Assumes we're always turning with positive angular velocity
+def getTurn(startRad, endRad):
+    if startRad <= endRad:
+        ret = endRad - startRad
+    else:
+        ret = (math.pi * 2 - startRad) + endRad
+    # print("Turned: ", ret)
+    return ret
+
 class DriveInSquare(object):
     def __init__(self):
         # Our Initialized Node:
         rospy.init_node('drive_in_square')
         
         #Rospy Params
-        self.queue_size = 20 # The size of our message queues
-        self.rateLimit = rospy.Rate(10) # How often we publish messages (2 Hz), utilize with self.rateLimit.sleep()
+        self.queue_size = 20  # The size of our message queues
+        self.rateLimit = rospy.Rate(10)  # How often we publish messages (2 Hz), utilize with self.rateLimit.sleep()
 
         # Topic Objects
         self.move = rospy.Publisher('/cmd_vel', Twist , queue_size=self.queue_size) # A publisher to tell Turtlebot what to do
@@ -37,8 +47,8 @@ class DriveInSquare(object):
         self.loops = 1 # How many times we want the robot to move in a square
         self.forwardDistance = 1 # The length the robot should move in any one direction (m)
         self.turnRadians = math.pi / 2 # How many radians we should turn at one time (rad)
-        self.forwardSpeed = 0.2 # m/s
-        self.turnSpeed = 0.2 # rad/s
+        self.forwardSpeed = 0.2  # m/s
+        self.turnSpeed = 0.2  # rad/s
         
 
         # Movement Commands
@@ -106,7 +116,7 @@ class DriveInSquare(object):
         startRad = self.poseRad
 
         # Turn until we turn 'radians' radians
-        while abs(self.poseRad - startRad) < self.turnRadians and not rospy.is_shutdown():
+        while getTurn(startRad, self.poseRad) < self.turnRadians and not rospy.is_shutdown():
             self.move.publish(self.turnCommand)
             self.rateLimit.sleep()
         self.stop(1)
