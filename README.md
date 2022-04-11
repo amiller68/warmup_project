@@ -48,7 +48,7 @@ The run method of my implementation carries out a single iteration of a loop tha
      - it then runs singleLoop() once and then exits
       
 ### GIF
-![](https://www.dropbox.com/s/cvacehn80aeh4lz/drive_in_square.gif?dl=1)
+![](gifs/drive_in_square.gif)
 
 ## Follow Person Behavior
 
@@ -85,7 +85,7 @@ The run method of my implementation carries out a single iteration of a loop tha
      - it then runs followPerson() until rospy is shutdown, at which point shutDown() is called and the program exits.
       
 ### GIF
-![](https://www.dropbox.com/s/iqt4cyyvpvsx7wb/follow_person.gif?dl=1)
+![](gifs/follow_person.gif)
 
 ## Follow Wall Behavior
 
@@ -125,7 +125,7 @@ The run method of my implementation carries out a single iteration of a loop tha
      - it then runs followWall() until rospy is shutdown, at which point shutDown() is called and the program exits.
       
 ### GIF
-![](![](https://www.dropbox.com/s/85nmla3cagxxlr5/follow_wall.gif?dl=1))
+![](gifs/follow_wall.gif)
 
 ## Challenges
  - The first challenge I faced when handling the robot was imprecision. My first approach for driving in a square was to transition my implementation from velocity duration based, to odometry based. The extra measurement radically improved my robots accuracy, however it still suffered issues. I realized I could fix this by adjusting the rate to reflect the data resolution I needed in my implementation. I settled on a rate of 20 Hz.
