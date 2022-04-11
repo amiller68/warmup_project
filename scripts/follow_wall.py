@@ -18,10 +18,7 @@ class WallFollower():
 
         # Topic Objects
         self.move = rospy.Publisher('/cmd_vel', Twist, queue_size=self.queue_size)
-        rospy.Subscriber("/scan", LaserScan, self.updateScanState)
-
-        # A class variable to hold our scan state
-        self.scanState = None
+        rospy.Subscriber("/scan", LaserScan, self.setScan)
 
         # The base speed our robot should turn in order to follow a wall
         self.base_angular_vel = 2.5
@@ -43,7 +40,7 @@ class WallFollower():
         self.warn_distance = None
 
     # Update our state of data ranges from the Subscriber
-    def updateScanState(self, msg):
+    def setScan(self, msg):
         if not self.scanState:
             self.max_scan_dist = msg.range_max
         # Extract the observed ranges and save them into state
@@ -95,11 +92,12 @@ class WallFollower():
             # Determine our angular pid control scalar
 
             # If the point is on the robots left
-            if 0 <= a < 180:
+            if 0 <= a <= 180:
                 # Make the robot turn towards the wall
                 angular_pid = (a - 90) / 90
-            # Same if the robot is on the right
+            # If the robot is on the right
             else:
+                # Make it turn make towards its left
                 angular_pid = -(a - 270) / 90
 
             # This term is used to accelerate the turns and decelerate the linear movement of the bot when needed

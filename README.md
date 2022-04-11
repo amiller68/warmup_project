@@ -63,7 +63,8 @@ The run method of my implementation carries out a single iteration of a loop tha
  - sets the rate of the topic publishers, 
  - sets the max angular and linear velocities of the robot,
  - sets the closest the robot should get to an object, 
- - and the minimum distance an object must be within in order to be converged on by the robot.
+ - the minimum distance an object must be within in order to be converged on by the robot.
+ - and the variable to hold the LiDAR scan state that the robot observes
 
 **My PersonFollower object implements the following functions:**
  - setScan(msg):
@@ -84,7 +85,7 @@ The run method of my implementation carries out a single iteration of a loop tha
      - it then runs followPerson() until rospy is shutdown, at which point shutDown() is called and the program exits.
       
 ### GIF
-![](gifs/follow_person.gif)
+![](https://www.dropbox.com/s/iqt4cyyvpvsx7wb/follow_person.gif?dl=1)
 
 ## Follow Wall Behavior
 
@@ -98,40 +99,50 @@ The run method of my implementation carries out a single iteration of a loop tha
  - defines a subscriber for the /scan topic, 
  - sets the rate of the topic publishers, 
  - sets the base angular and linear velocities of the robot, 
- - sets the closest the robot should get to a wall, 
+ - sets the farthest robot should get from a wall, 
  - the minimum distance an object must be within in order to make the robot turn away from an incoming wall
+ -  and a set of variables to hold the LiDAR scan state that the robot observes
 
-**My PersonFollower object implements the following functions:**
+
+**My WallFollower object implements the following functions:**
  - setScan(msg):
      - this function is used as Callback to the LaserScan subscriber
      - It sets the scan state of the object, by taking and recording the ranges of objects around the robot
  - shutDown(duration):
      - This function is called when rospy shutdown
      - it stops the robot
- - followPerson():
-   - This function publishes a velocity command which causes the robot to converge on the closest point.
-   - It does this by first seeing if the scan state contains any non zero values less than the robots set minimum activation distance
-   - It then records the range and angle of the smallest observed range
-   - If it finds an object, if the object is in front of the robot, it sets a linear velocity proportional to the range and bearing of the perceived closest point.
-   - Based on whether the object it to the left or the right of the robot, it sets an appropriate angular velocity proportional to how far off from 0 degrees the object's bearing is.
-   - it then published the movement and returns
+ - closestPoint():
+   - This function returns the point closest to the robot based on its ScanState
+   - It does this by first seeing if the scan state contains any non-zero values
+   - It then returns the range and angle of the smallest observed range 
+ - followWall():
+   - This function publishes a velocity to the cmd_vel topic that causes the robot to follow a wall to its left
+   - It does this by seeing what point is closest to the wall, and comparing it to the robot's distance to the wall on its immediate left (90 degrees from center)
+   - It than determines a linear and angular PID controls that, when scaled against the base angular and linear velocities, would correctly align the robot to a wall on its left
+   - It then creates and publishes a movement to the cmd_vel topic that reflects this needed velocity and returns
  - run():
      - This function sleeps until the scan state of the object is initialized
-     - it then runs followPerson() until rospy is shutdown, at which point shutDown() is called and the program exits.
+     - it then runs followWall() until rospy is shutdown, at which point shutDown() is called and the program exits.
       
 ### GIF
-![](gifs/follow_person.gif)
+![](![](https://www.dropbox.com/s/85nmla3cagxxlr5/follow_wall.gif?dl=1))
 
 ## Challenges
- - The first challenge I faced when handling the robot was imprecision. My first approach was to transition my implementation from velocity duration based, to odometry based. The extra measurement radically improved my robots accuracy, however it still suffered issues. I realized I could fix this by adjusting the rate to reflect the data resolution I needed in my implementation. I settled on a rate of 20 Hz.
- - The second challeneg I faced was coming up with good proportional controls for my outputs. I especially had to face this difficulty in the People and Wall follower behaviors.
+ - The first challenge I faced when handling the robot was imprecision. My first approach for driving in a square was to transition my implementation from velocity duration based, to odometry based. The extra measurement radically improved my robots accuracy, however it still suffered issues. I realized I could fix this by adjusting the rate to reflect the data resolution I needed in my implementation. I settled on a rate of 20 Hz.
+ - The second challenge I faced was coming up with good proportional controls for my outputs. I especially had to face this difficulty in the People and Wall follower behaviors.
+   - I found that I could radically change the accuracy of the robot based on what maximum velocities I encoded into my class implementations
+   - This was more apparent when designing the wall follower and how the robot handled rounding corners
+ - It was very difficult to make the wall follower stat close to the wall given my implementation
+   - I solved this by including `distance_penalty` in my calculation of angular and linear PID controls, but this is imprecise and needs improvement
 
 ## Future Work
  - In the future I would take the basic Odometry controls of my DriveInSquare class and implement a movement library to use in future projects. In order to do this I would parameterize the class and all its methods. This might come in handy for the final project.
  - The use of the closest point using the scan subscriber was simple, but surprisingly effective. I will certainly use this method when designing converging robots, if my project requires it.
+ - I wasn't very happy with my wall follower performance; the movement was choppy and my code base seems overly complicated.
+   - In the future I should research more about PID control methods in order to build something more responsive.
 
 ## Takeaways
 - When working with kinematics and asynchronous programming, its beneficial to implement checks on movements with odometry. Moving by speed and distance was often inaccurate.
 - It's helpful to parameterize your methods as much as possible in the beginning, to make testing and experimentation easier later.
 - I should think deeply about PID controls before I try testing. I wasted alot of time trying to see if my logic was wrong, and not taking a look at how my controls could improve the accuracy of the robot.
-- 
+- I should study different PID based output controls. Having missed the class on that, I tried doing the project with simpler methods than I suspect was needed.
